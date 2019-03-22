@@ -27,6 +27,7 @@ const CONST = {
   // 메시지 Prefix 상수
   MSG_PREFIX: [0xb0, 0xac, 0xae, 0xc2, 0xad, 0xab],
 
+  //  KNOWN_PACKET: []
   // 기기별 상태 및 제어 코드(HEX)
   DEVICE_STATE: [
     {deviceId: 'Light', subId: '1', stateHex: Buffer.alloc(5,'b079310078','hex'), power1: 'OFF', power2: 'OFF', power3: 'OFF'}, //상태-00
@@ -37,6 +38,8 @@ const CONST = {
     {deviceId: 'Light', subId: '1', stateHex: Buffer.alloc(5,'b07931057d','hex'), power1: 'ON' , power2: 'OFF', power3: 'ON' }, //상태-05
     {deviceId: 'Light', subId: '1', stateHex: Buffer.alloc(5,'b07931067e','hex'), power1: 'OFF', power2: 'ON' , power3: 'ON' }, //상태-06
     {deviceId: 'Light', subId: '1', stateHex: Buffer.alloc(5,'b07931077f','hex'), power1: 'ON' , power2: 'ON' , power3: 'ON' }, //상태-07
+    {deviceId: 'Light', subId: 'all', stateHex: Buffer.alloc(4,'b0520163','hex'), power: 'ON' }, // 전체조명 ON
+    {deviceId: 'Light', subId: 'all', stateHex: Buffer.alloc(4,'b0520062','hex'), power: 'OFF' }, // 전체조명 OFF
     {deviceId: 'Fan', subId: '1', stateHex: Buffer.alloc(6,'b04e0300017c','hex'), power: 'OFF', speed: 'low' },
     {deviceId: 'Fan', subId: '1', stateHex: Buffer.alloc(6,'b04e0200017d','hex'), power: 'OFF', speed: 'mid' },
     {deviceId: 'Fan', subId: '1', stateHex: Buffer.alloc(6,'b04e0100017e','hex'), power: 'OFF', speed: 'high'},
@@ -62,6 +65,8 @@ const CONST = {
     {deviceId: 'Light', subId: '1', commandHex: Buffer.alloc(5,'ac7a020155','hex'), power2: 'ON' }, //거실2--on
     {deviceId: 'Light', subId: '1', commandHex: Buffer.alloc(5,'ac7a030055','hex'), power3: 'OFF'}, //거실3--off
     {deviceId: 'Light', subId: '1', commandHex: Buffer.alloc(5,'ac7a030154','hex'), power3: 'ON' }, //거실3--on
+    {deviceId: 'Light', subId: 'all', commandHex: Buffer.alloc(4,'ad53007e','hex'), power: 'OFF' }, //전체소등
+    {deviceId: 'Light', subId: 'all', commandHex: Buffer.alloc(4,'ad53017f','hex'), power: 'ON' }, //전체점등
     {deviceId: 'Fan', subId: '1', commandHex: Buffer.alloc(6, 'c24f05000008','hex'), power: 'ON'    }, //켜짐
     {deviceId: 'Fan', subId: '1', commandHex: Buffer.alloc(6, 'c24f0600000b','hex'), power: 'OFF'   }, //꺼짐
     {deviceId: 'Fan', subId: '1', commandHex: Buffer.alloc(6, 'c24f0300000e','hex'), speed: 'low'   }, //약(켜짐)
@@ -88,8 +93,27 @@ const CONST = {
   // 명령어 Topic (/homenet/${deviceId}${subId}/${property}/command/ = ${value})
   TOPIC_PRFIX: 'homenet',
   STATE_TOPIC: 'homenet/%s%s/%s/state', //상태 전달
-  DEVICE_TOPIC: 'homenet/+/+/command' //명령 수신
+  DEVICE_TOPIC: 'homenet/+/+/command', //명령 수신
 
+  KNOWN_PACKET: [
+        Buffer.alloc(8, 'c35a0019a15a007b','hex'), Buffer.alloc(8, 'a25a0078a35a0079','hex'), Buffer.alloc(8, 'a45a007ea5410064','hex'),
+        Buffer.alloc(2, 'ae7d','hex'),  // 온도 조절 cmd
+        Buffer.alloc(2, 'ae7c','hex'),  // 온도 조절 cmd
+        Buffer.alloc(2, 'b07c','hex'),  // 온도 조절 ack
+        Buffer.alloc(4, 'b0410071', 'hex'),  // ack
+        Buffer.alloc(4, 'a15a007b', 'hex'),  // ??
+        Buffer.alloc(4, 'a25a0078', 'hex'),  // ??
+        Buffer.alloc(4, 'a35a0079', 'hex'),  // ??
+        Buffer.alloc(4, 'a45a007e', 'hex'),  // ??
+        Buffer.alloc(4, 'a5410064', 'hex'),  // ??
+        Buffer.alloc(4, 'a6410067', 'hex'),  // ??
+        Buffer.alloc(4, 'ab41006a', 'hex'),  // 가스
+        Buffer.alloc(4, 'ad41006c', 'hex'),  // 
+        Buffer.alloc(4, 'ad53007e', 'hex'),  // 일괄조명 off cmd
+        Buffer.alloc(4, 'ad52007f', 'hex'),  // 일괄조명 status check
+        Buffer.alloc(2, 'b052', 'hex'),  // 일괄조명 status 
+        Buffer.alloc(2, 'b053', 'hex')  // 일괄조명 cmd ack
+  ] 
 };
 
 
@@ -186,7 +210,10 @@ port.open((err) => {
 //////////////////////////////////////////////////////////////////////////////////////
 // 홈넷에서 SerialPort로 상태 정보 수신
 parser.on('data', function (data) {
-	// console.log('Receive interval: ', (new Date().getTime())-lastReceive, 'ms ->', data.toString('hex'));
+
+        var objFound = CONST.KNOWN_PACKET.find(obj => data.includes(obj));
+        if(!objFound)
+	     log('Unknown packet received interval: ', (new Date().getTime())-lastReceive, 'ms ->', data.toString('hex'));
 	lastReceive = new Date().getTime();
 	
 	// 첫번째 바이트가 'b0'이면 응답 메시지
@@ -206,7 +233,7 @@ parser.on('data', function (data) {
 			}
 			break;
 		// 제어 명령 Ack 메시지 : 조명, 난방, 난방온도, 환풍기
-		case 0x7a: case 0x7d: case 0x7f: case 0x4f:
+		case 0x7a: case 0x7d: case 0x7f: case 0x4f: 
 			// Ack 메시지를 받은 명령은 제어 성공하였으므로 큐에서 삭제
 			const ack = Buffer.alloc(3);
 			data.copy(ack, 0, 1, 4);
@@ -215,7 +242,16 @@ parser.on('data', function (data) {
 				log('[Serial] Success command:', data.toString('hex'));
 				queue.splice(objFoundIdx, 1);
 			}
-			break;			
+			break;	
+		case 0x52: 	// 제어 명령 Ack 메시지 : 전체 조명
+                        const prefix = Buffer.alloc(3,'ad53','hex');    //todo prefix + data[3]
+                        prefix[2] = data[2]; 
+			var objFoundIdx = queue.findIndex(obj => obj.commandHex.includes(prefix));
+			if(objFoundIdx > -1) {
+				log('[Serial] Success command:', data.toString('hex'));
+				queue.splice(objFoundIdx, 1);
+			}
+			break;	
 	}
 	
 });
