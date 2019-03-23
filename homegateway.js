@@ -40,6 +40,8 @@ const CONST = {
     {deviceId: 'Light', subId: '1', stateHex: Buffer.alloc(5,'b07931077f','hex'), power1: 'ON' , power2: 'ON' , power3: 'ON' }, //상태-07
     {deviceId: 'Light', subId: 'all', stateHex: Buffer.alloc(4,'b0520163','hex'), power: 'ON' }, // 전체조명 ON
     {deviceId: 'Light', subId: 'all', stateHex: Buffer.alloc(4,'b0520062','hex'), power: 'OFF' }, // 전체조명 OFF
+    {deviceId: 'Gas', subId: '1', stateHex: Buffer.alloc(4,'b0410170','hex'), valve: 'ON' }, // GAS ON
+    {deviceId: 'Gas', subId: '1', stateHex: Buffer.alloc(4,'b0410071','hex'), valve: 'OFF' }, // GAS OFF
     {deviceId: 'Fan', subId: '1', stateHex: Buffer.alloc(6,'b04e0300017c','hex'), power: 'OFF', speed: 'low' },
     {deviceId: 'Fan', subId: '1', stateHex: Buffer.alloc(6,'b04e0200017d','hex'), power: 'OFF', speed: 'mid' },
     {deviceId: 'Fan', subId: '1', stateHex: Buffer.alloc(6,'b04e0100017e','hex'), power: 'OFF', speed: 'high'},
@@ -67,6 +69,8 @@ const CONST = {
     {deviceId: 'Light', subId: '1', commandHex: Buffer.alloc(5,'ac7a030154','hex'), power3: 'ON' }, //거실3--on
     {deviceId: 'Light', subId: 'all', commandHex: Buffer.alloc(4,'ad53007e','hex'), power: 'OFF' }, //전체소등
     {deviceId: 'Light', subId: 'all', commandHex: Buffer.alloc(4,'ad53017f','hex'), power: 'ON' }, //전체점등
+    {deviceId: 'Gas', subId: '1', commandHex: Buffer.alloc(4,'ab780053','hex'), valve: 'OFF' }, //전체소등
+    {deviceId: 'Gas', subId: '1', commandHex: Buffer.alloc(4,'ab780053','hex'), valve: 'ON' }, //전체점등
     {deviceId: 'Fan', subId: '1', commandHex: Buffer.alloc(6, 'c24f05000008','hex'), power: 'ON'    }, //켜짐
     {deviceId: 'Fan', subId: '1', commandHex: Buffer.alloc(6, 'c24f0600000b','hex'), power: 'OFF'   }, //꺼짐
     {deviceId: 'Fan', subId: '1', commandHex: Buffer.alloc(6, 'c24f0300000e','hex'), speed: 'low'   }, //약(켜짐)
@@ -96,18 +100,21 @@ const CONST = {
   DEVICE_TOPIC: 'homenet/+/+/command', //명령 수신
 
   KNOWN_PACKET: [
-        Buffer.alloc(8, 'c35a0019a15a007b','hex'), Buffer.alloc(8, 'a25a0078a35a0079','hex'), Buffer.alloc(8, 'a45a007ea5410064','hex'),
+        Buffer.alloc(4, 'c35a0019','hex'), 
         Buffer.alloc(2, 'ae7d','hex'),  // 온도 조절 cmd
         Buffer.alloc(2, 'ae7c','hex'),  // 온도 조절 cmd
         Buffer.alloc(2, 'b07c','hex'),  // 온도 조절 ack
-        Buffer.alloc(4, 'b0410071', 'hex'),  // ack
+        Buffer.alloc(2, 'b07d','hex'),  // 온도 조절 ack
+        Buffer.alloc(4, 'b0410071', 'hex'),  // gas status(=on)
+        Buffer.alloc(4, 'b0410170', 'hex'),  // gas status(=off)
         Buffer.alloc(4, 'a15a007b', 'hex'),  // ??
         Buffer.alloc(4, 'a25a0078', 'hex'),  // ??
         Buffer.alloc(4, 'a35a0079', 'hex'),  // ??
         Buffer.alloc(4, 'a45a007e', 'hex'),  // ??
         Buffer.alloc(4, 'a5410064', 'hex'),  // ??
         Buffer.alloc(4, 'a6410067', 'hex'),  // ??
-        Buffer.alloc(4, 'ab41006a', 'hex'),  // 가스
+        Buffer.alloc(4, 'ab41006a', 'hex'),  // gas current status ?
+        Buffer.alloc(4, 'ab780053', 'hex'),  // gas valve off cmd
         Buffer.alloc(4, 'ad41006c', 'hex'),  // 
         Buffer.alloc(4, 'ad53007e', 'hex'),  // 일괄조명 off cmd
         Buffer.alloc(4, 'ad52007f', 'hex'),  // 일괄조명 status check
